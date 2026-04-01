@@ -27,10 +27,10 @@ export const PLAYER_COLORS: Record<PlayerColor, string> = {
 };
 
 export const COLORS = {
-  bgPrimary: '#080810',
-  bgSecondary: '#0f1018',
-  bgCard: '#12141e',
-  bgInput: '#0a0a14',
+  bgPrimary: '#0e0e1c',
+  bgSecondary: '#13141f',
+  bgCard: 'rgba(20, 22, 38, 0.72)',
+  bgInput: 'rgba(12, 12, 24, 0.65)',
   text: '#f0ead6',
   textMuted: '#7a7060',
   textDim: '#a09880',
