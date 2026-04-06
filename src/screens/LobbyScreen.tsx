@@ -96,12 +96,12 @@ export default function LobbyScreen({ navigate, profile }: Props) {
 
       // A game is "in progress" if 4 players are seated OR the game has advanced past
       // turn 1. Enochian starts with phase='move' (no dice), so the phase check used
-      // for the classic 'roll' flow doesn't apply — don't use it as a started signal.
-      const isClassic = (res.gameType || 'classic') === 'classic';
+      // for the classic/2v2 'roll' flow doesn't apply — don't use it as a started signal.
+      const hasDicePhase = (res.gameType || 'classic') !== 'enochian';
       const started =
         res.players.length >= 4 ||
         res.state.turnNumber > 1 ||
-        (isClassic && res.state.phase !== 'roll');
+        (hasDicePhase && res.state.phase !== 'roll');
       navigate(started ? 'Game' : 'Waiting');
     });
   };
@@ -141,14 +141,25 @@ export default function LobbyScreen({ navigate, profile }: Props) {
               </Text>
             </Pressable>
             <Pressable
+              onPress={() => setSelectedMode('2v2')}
+              style={[styles.modeTab, selectedMode === '2v2' && styles.modeTabActive]}
+            >
+              <Text style={[styles.modeTabText, selectedMode === '2v2' && styles.modeTabTextActive]}>
+                2v2 Teams
+              </Text>
+            </Pressable>
+            <Pressable
               onPress={() => setSelectedMode('enochian')}
               style={[styles.modeTab, selectedMode === 'enochian' && styles.modeTabActive]}
             >
               <Text style={[styles.modeTabText, selectedMode === 'enochian' && styles.modeTabTextActive]}>
-                Teams (2v2)
+                Enochian
               </Text>
             </Pressable>
           </View>
+          {selectedMode === '2v2' && (
+            <Text style={styles.modeDesc}>Red+Green vs Yellow+Black — Dice, team elimination</Text>
+          )}
           {selectedMode === 'enochian' && (
             <Text style={styles.modeDesc}>Elemental Team Battle — No dice, chess pieces</Text>
           )}
@@ -220,7 +231,7 @@ export default function LobbyScreen({ navigate, profile }: Props) {
               <Pressable key={g.id} style={styles.gameItem} onPress={() => joinGame(g.code)}>
                 <Text style={styles.gameCode}>{g.code}</Text>
                 <Text style={styles.gameInfo}>
-                  {g.game_type === 'enochian' ? '2v2 ' : ''}{g.player_count}/4 players
+                  {g.game_type === 'enochian' ? 'Enochian ' : g.game_type === '2v2' ? '2v2 ' : ''}{g.player_count}/4 players
                 </Text>
               </Pressable>
             ))}

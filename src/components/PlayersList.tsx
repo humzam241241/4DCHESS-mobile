@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { GameState, Player, PlayerColor, GameType } from '../types';
-import { PLAYER_NAMES, ENOCHIAN_PLAYER_NAMES, ENOCHIAN_TEAM_LABELS, PLAYER_COLORS, COLORS } from '../constants';
+import { PLAYER_NAMES, ENOCHIAN_PLAYER_NAMES, ENOCHIAN_TEAM_LABELS, TEAM_2V2_LABELS, PLAYER_COLORS, COLORS } from '../constants';
 
 interface PlayersListProps {
   players: Player[];
@@ -26,6 +26,8 @@ function countPieces(board: (any | null)[][], color: string): number {
 
 export default function PlayersList({ players, gameState, myColor, gameType = 'classic' }: PlayersListProps) {
   const isEnochian = gameType === 'enochian';
+  const is2v2 = gameType === '2v2';
+  const isTeamGame = isEnochian || is2v2;
   const frozen = gameState.frozen || [];
 
   return (
@@ -45,6 +47,11 @@ export default function PlayersList({ players, gameState, myColor, gameType = 'c
             {isEnochian && (
               <View style={[styles.teamBadge, ENOCHIAN_TEAM_LABELS[p.color] === 'Sulphur' ? styles.teamA : styles.teamB]}>
                 <Text style={styles.teamText}>{ENOCHIAN_TEAM_LABELS[p.color]}</Text>
+              </View>
+            )}
+            {is2v2 && (
+              <View style={[styles.teamBadge, (p.color === 'red' || p.color === 'green') ? styles.teamA : styles.teamB]}>
+                <Text style={styles.teamText}>{TEAM_2V2_LABELS[p.color]}</Text>
               </View>
             )}
             {p.color === myColor && (

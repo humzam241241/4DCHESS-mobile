@@ -27,6 +27,11 @@ export const ENOCHIAN_TEAM_LABELS: Record<PlayerColor, string> = {
   red: 'Sulphur', yellow: 'Sulphur', green: 'Salt', black: 'Salt',
 };
 
+// 2v2 Teams: Red+Green vs Yellow+Black (diagonal corners)
+export const TEAM_2V2_LABELS: Record<PlayerColor, string> = {
+  red: 'Red+Green', yellow: 'Yel+Black', green: 'Red+Green', black: 'Yel+Black',
+};
+
 export const PIECE_ICONS: Record<PieceType, string> = {
   king: '\u265A',
   elephant: '\u265C',
@@ -60,37 +65,37 @@ export interface BoardThemeDef {
 }
 
 export const BOARD_THEMES: Record<BoardTheme, BoardThemeDef> = {
-  classic: { light: '#8a7356', dark: '#5a0000' },
-  bw:      { light: '#c0c0c0', dark: '#3a3a3a' },
-  green:   { light: '#d0dcc4', dark: '#5c7a4e' },
+  classic: { light: '#c4a972', dark: '#6e1010' },
+  bw:      { light: '#e0e0e0', dark: '#454545' },
+  green:   { light: '#e4ecd8', dark: '#6e9060' },
 
   // Enochian elemental sub-boards — each quadrant mixes the board's element with a sub-element.
   // Air (Yellow) — board of Air: tinged yellow across all squares
   air: {
-    light: '#f5e59a',
-    dark:  '#c9a618',
-    quadrants: ['#c9a618', '#7d9bb8', '#c25a28', '#4a4128'],
+    light: '#faf0b8',
+    dark:  '#d4b830',
+    quadrants: ['#d4b830', '#96b4cc', '#d47040', '#645838'],
     enochian: true,
   },
   // Water (Blue) — board of Water: tinged blue
   water: {
-    light: '#bcd6ea',
-    dark:  '#2a5a85',
-    quadrants: ['#8c9a5a', '#2a5a85', '#6a3545', '#1c2840'],
+    light: '#d4e8f5',
+    dark:  '#3870a0',
+    quadrants: ['#a0b070', '#3870a0', '#884860', '#2a3858'],
     enochian: true,
   },
   // Earth (Black/olive) — board of Earth: tinged dark
   earth: {
-    light: '#a89876',
-    dark:  '#1a1a1a',
-    quadrants: ['#7e6a24', '#2a3c58', '#5c2a1a', '#1a1a1a'],
+    light: '#c4b898',
+    dark:  '#2e2e2e',
+    quadrants: ['#9a8438', '#3e5470', '#784030', '#2e2e2e'],
     enochian: true,
   },
   // Fire (Red) — board of Fire: tinged red
   fire: {
-    light: '#e7b18a',
-    dark:  '#9c1f1f',
-    quadrants: ['#c87820', '#6a3a58', '#9c1f1f', '#3a1e18'],
+    light: '#f0c8a0',
+    dark:  '#b83030',
+    quadrants: ['#d89038', '#845070', '#b83030', '#503028'],
     enochian: true,
   },
 };
@@ -115,6 +120,6 @@ export const COLORS = {
   accentHover: '#E5C249',
   danger: '#dc2626',
   success: '#16a34a',
-  boardLight: '#8a7356',
-  boardDark: '#5a0000',
+  boardLight: '#c4a972',
+  boardDark: '#6e1010',
 };

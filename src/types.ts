@@ -2,7 +2,7 @@ export type PlayerColor = 'red' | 'yellow' | 'green' | 'black';
 export type PieceType = 'king' | 'elephant' | 'horse' | 'boat' | 'pawn' | 'queen' | 'bishop' | 'rook' | 'knight';
 export type Phase = 'roll' | 'move' | 'finished';
 export type DieFace = 'king' | 'elephant' | 'horse' | 'boat';
-export type GameType = 'classic' | 'enochian';
+export type GameType = 'classic' | '2v2' | 'enochian';
 
 export interface Piece {
   type: PieceType;

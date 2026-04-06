@@ -28,7 +28,9 @@ export default function GameScreen({ navigate, boardTheme = 'classic' }: Props) 
   const [activeTab, setActiveTab] = useState<'moves' | 'chat'>('moves');
 
   const isEnochian = game.gameType === 'enochian';
-  const noDice = isEnochian;
+  const is2v2 = game.gameType === '2v2';
+  const isTeamGame = isEnochian || is2v2;
+  const noDice = isEnochian; // 2v2 uses dice, enochian does not
   const nameMap = isEnochian ? ENOCHIAN_PLAYER_NAMES : PLAYER_NAMES;
 
   useEffect(() => {
@@ -242,7 +244,7 @@ export default function GameScreen({ navigate, boardTheme = 'classic' }: Props) 
           }
         </Text>
         <View style={styles.turnRight}>
-          {isEnochian && <Text style={styles.modeBadge}>2v2</Text>}
+          {isTeamGame && <Text style={styles.modeBadge}>{is2v2 ? '2v2' : 'Enochian'}</Text>}
           <Text style={styles.roomLabel}>Room: <Text style={styles.roomCode}>{game.roomCode}</Text></Text>
         </View>
       </View>
