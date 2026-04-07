@@ -25,12 +25,14 @@ export default function GameScreen({ navigate, boardTheme = 'classic' }: Props) 
   const [lastMove, setLastMove] = useState<{ from: { row: number; col: number }; to: { row: number; col: number } } | null>(null);
   const [rolling, setRolling] = useState(false);
   const [showGameOver, setShowGameOver] = useState(false);
+  const [oddEvenCode, setOddEvenCode] = useState<string | null>(null);
+  const [playerPoints, setPlayerPoints] = useState<Record<string, number> | null>(null);
+  const [geomanticFigure, setGeomanticFigure] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<'moves' | 'chat'>('moves');
 
   const isEnochian = game.gameType === 'enochian';
-  const is2v2 = game.gameType === '2v2';
-  const isTeamGame = isEnochian || is2v2;
-  const noDice = isEnochian; // 2v2 uses dice, enochian does not
+  const isTeamGame = isEnochian;
+  const noDice = isEnochian;
   const nameMap = isEnochian ? ENOCHIAN_PLAYER_NAMES : PLAYER_NAMES;
 
   useEffect(() => {
@@ -74,9 +76,23 @@ export default function GameScreen({ navigate, boardTheme = 'classic' }: Props) 
       game.addChat({ color: '', name: 'System', message: `${data.name} disconnected` });
     };
 
-    const onGameOver = () => {
+    const onGameOver = (data: any) => {
+      if (data?.state) game.setGameState(data.state);
+      if (data?.oddEvenCode) setOddEvenCode(data.oddEvenCode);
+      if (data?.playerPoints) setPlayerPoints(data.playerPoints);
+      if (data?.geomanticFigure) setGeomanticFigure(data.geomanticFigure);
       setShowGameOver(true);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      // Announce placements in chat
+      if (data?.placements) {
+        const medals = { gold: '\u{1F947}', silver: '\u{1F948}', bronze: '\u{1F949}', fourth: '4th' };
+        for (const [rank, color] of Object.entries(data.placements)) {
+          if (color) {
+            const medal = medals[rank as keyof typeof medals] || rank;
+            game.addChat({ color: '', name: 'System', message: `${medal} ${nameMap[color as PlayerColor]} — ${rank.toUpperCase()}` });
+          }
+        }
+      }
     };
 
     const onChatMessage = (data: any) => {
@@ -89,12 +105,20 @@ export default function GameScreen({ navigate, boardTheme = 'classic' }: Props) 
       game.addChat({ color: '', name: 'System', message: 'Game started!' });
     };
 
+    const onPlayerEliminated = (data: any) => {
+      game.addChat({
+        color: '', name: 'System',
+        message: `${nameMap[data.color as PlayerColor]} eliminated — ${data.rank}`,
+      });
+    };
+
     getSocket().on('dice-rolled', onDiceRolled);
     getSocket().on('move-made', onMoveMade);
     getSocket().on('turn-skipped', onTurnSkipped);
     getSocket().on('player-joined', onPlayerJoined);
     getSocket().on('player-reconnected', onPlayerReconnected);
     getSocket().on('player-disconnected', onPlayerDisconnected);
+    getSocket().on('player-eliminated', onPlayerEliminated);
     getSocket().on('game-over', onGameOver);
     getSocket().on('chat-message', onChatMessage);
     getSocket().on('game-started', onGameStarted);
@@ -121,6 +145,7 @@ export default function GameScreen({ navigate, boardTheme = 'classic' }: Props) 
       getSocket().off('player-joined', onPlayerJoined);
       getSocket().off('player-reconnected', onPlayerReconnected);
       getSocket().off('player-disconnected', onPlayerDisconnected);
+      getSocket().off('player-eliminated', onPlayerEliminated);
       getSocket().off('game-over', onGameOver);
       getSocket().off('chat-message', onChatMessage);
       getSocket().off('game-started', onGameStarted);
@@ -128,7 +153,7 @@ export default function GameScreen({ navigate, boardTheme = 'classic' }: Props) 
   }, []);
 
   const onCellPress = useCallback((row: number, col: number) => {
-    if (!game.gameState || game.gameState.winner || game.gameState.currentPlayer !== game.myColor) return;
+    if (!game.gameState || game.gameState.winner || !myColors.includes(game.gameState.currentPlayer)) return;
     // Classic requires dice; Enochian does not
     if (!noDice && !game.gameState.dice) return;
 
@@ -155,7 +180,7 @@ export default function GameScreen({ navigate, boardTheme = 'classic' }: Props) 
     }
 
     const piece = game.gameState.board[row][col];
-    if (piece && piece.color === game.myColor) {
+    if (piece && myColors.includes(piece.color)) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       getSocket().emit('get-moves', { row, col }, (res: any) => {
         if (res.moves && res.moves.length > 0) {
@@ -171,7 +196,7 @@ export default function GameScreen({ navigate, boardTheme = 'classic' }: Props) 
 
     setSelectedCell(null);
     setValidMoves([]);
-  }, [game.gameState, game.myColor, selectedCell, validMoves, noDice]);
+  }, [game.gameState, myColors, selectedCell, validMoves, noDice]);
 
   const onRoll = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -230,7 +255,8 @@ export default function GameScreen({ navigate, boardTheme = 'classic' }: Props) 
   if (!game.gameState) return null;
 
   const gs = game.gameState;
-  const isMyTurn = gs.currentPlayer === game.myColor;
+  const myColors = game.myColors && game.myColors.length > 0 ? game.myColors : (game.myColor ? [game.myColor] : []);
+  const isMyTurn = myColors.includes(gs.currentPlayer);
 
   return (
     <View style={styles.container}>
@@ -244,7 +270,7 @@ export default function GameScreen({ navigate, boardTheme = 'classic' }: Props) 
           }
         </Text>
         <View style={styles.turnRight}>
-          {isTeamGame && <Text style={styles.modeBadge}>{is2v2 ? '2v2' : 'Enochian'}</Text>}
+          {isTeamGame && <Text style={styles.modeBadge}>Enochian</Text>}
           <Text style={styles.roomLabel}>Room: <Text style={styles.roomCode}>{game.roomCode}</Text></Text>
         </View>
       </View>
@@ -322,8 +348,15 @@ export default function GameScreen({ navigate, boardTheme = 'classic' }: Props) 
       <GameOverModal
         visible={showGameOver}
         winner={gs.winner}
+        winnerTeam={gs.winnerTeam}
+        placements={gs.placements}
+        myColor={game.myColor}
+        myColors={game.myColors}
         turnNumber={gs.turnNumber}
         moveCount={game.moveHistory.length}
+        oddEvenCode={oddEvenCode}
+        playerPoints={playerPoints}
+        geomanticFigure={geomanticFigure}
         onBackToLobby={backToLobby}
       />
     </View>

@@ -2,7 +2,7 @@ export type PlayerColor = 'red' | 'yellow' | 'green' | 'black';
 export type PieceType = 'king' | 'elephant' | 'horse' | 'boat' | 'pawn' | 'queen' | 'bishop' | 'rook' | 'knight';
 export type Phase = 'roll' | 'move' | 'finished';
 export type DieFace = 'king' | 'elephant' | 'horse' | 'boat';
-export type GameType = 'classic' | '2v2' | 'enochian';
+export type GameType = 'classic' | 'enochian';
 
 export interface Piece {
   type: PieceType;
@@ -10,14 +10,23 @@ export interface Piece {
   thronePartner?: Piece;
 }
 
+export interface Placements {
+  gold: PlayerColor | null;
+  silver: PlayerColor | null;
+  bronze: PlayerColor | null;
+  fourth: PlayerColor | null;
+}
+
 export interface GameState {
   board: (Piece | null)[][];
   currentPlayer: PlayerColor;
   eliminated: PlayerColor[];
+  eliminationOrder?: PlayerColor[];
   dice: [DieFace, DieFace] | null;
   diceUsed: [boolean, boolean];
   winner: PlayerColor | null;
   winnerTeam?: string;
+  placements?: Placements | null;
   frozen?: PlayerColor[];
   turnNumber: number;
   phase: Phase;

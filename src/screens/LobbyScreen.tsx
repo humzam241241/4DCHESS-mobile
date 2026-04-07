@@ -6,11 +6,11 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getSocket } from '../socket';
 import { useGame } from '../store';
-import { COLORS, PLAYER_NAMES, SERVER_URL, BOARD_THEMES, BoardTheme } from '../constants';
-import { GameType } from '../types';
+import { COLORS, PLAYER_NAMES, PLAYER_COLORS, PLAYERS, SERVER_URL, BOARD_THEMES, BoardTheme } from '../constants';
+import { GameType, PlayerColor } from '../types';
 
 type Props = {
-  navigate: (screen: 'Lobby' | 'Waiting' | 'Game' | 'Leaderboard' | 'Admin') => void;
+  navigate: (screen: 'Lobby' | 'Waiting' | 'Game' | 'Leaderboard' | 'Admin' | 'Marketplace') => void;
   profile?: { is_admin?: boolean; has_lifetime_access?: boolean; subscription_status?: string } | null;
 };
 
@@ -35,6 +35,15 @@ export default function LobbyScreen({ navigate, profile }: Props) {
   const [recentGames, setRecentGames] = useState<any[]>([]);
   const [selectedMode, setSelectedMode] = useState<GameType>('classic');
   const [boardTheme, setBoardTheme] = useState<BoardTheme>('classic');
+  const [selectedColors, setSelectedColors] = useState<PlayerColor[]>([]);
+
+  const toggleColor = (color: PlayerColor) => {
+    setSelectedColors(prev => {
+      if (prev.includes(color)) return prev.filter(c => c !== color);
+      if (prev.length >= 2) return [prev[1], color];
+      return [...prev, color];
+    });
+  };
 
   useEffect(() => {
     AsyncStorage.getItem('chaturaji_name').then(n => { if (n) setName(n); });
@@ -64,11 +73,12 @@ export default function LobbyScreen({ navigate, profile }: Props) {
     if (!trimmed) return Alert.alert('Enter your name');
     game.setMyName(trimmed);
 
-    getSocket().emit('create-game', { playerName: trimmed, gameType: selectedMode }, (res: any) => {
+    getSocket().emit('create-game', { playerName: trimmed, gameType: selectedMode, preferredColors: selectedColors.length === 2 ? selectedColors : undefined }, (res: any) => {
       if (res.error) return Alert.alert('Error', res.error);
       game.setGameId(res.gameId);
       game.setRoomCode(res.code);
       game.setMyColor(res.color);
+      game.setMyColors(selectedColors.length === 2 ? selectedColors : [res.color]);
       game.setGameType(res.gameType || selectedMode);
       game.setGameState(res.state);
       game.setPlayers(res.players);
@@ -141,14 +151,6 @@ export default function LobbyScreen({ navigate, profile }: Props) {
               </Text>
             </Pressable>
             <Pressable
-              onPress={() => setSelectedMode('2v2')}
-              style={[styles.modeTab, selectedMode === '2v2' && styles.modeTabActive]}
-            >
-              <Text style={[styles.modeTabText, selectedMode === '2v2' && styles.modeTabTextActive]}>
-                2v2 Teams
-              </Text>
-            </Pressable>
-            <Pressable
               onPress={() => setSelectedMode('enochian')}
               style={[styles.modeTab, selectedMode === 'enochian' && styles.modeTabActive]}
             >
@@ -157,11 +159,36 @@ export default function LobbyScreen({ navigate, profile }: Props) {
               </Text>
             </Pressable>
           </View>
-          {selectedMode === '2v2' && (
-            <Text style={styles.modeDesc}>Red+Green vs Yellow+Black — Dice, team elimination</Text>
-          )}
           {selectedMode === 'enochian' && (
             <Text style={styles.modeDesc}>Elemental Team Battle — No dice, chess pieces</Text>
+          )}
+
+          {/* Color Picker for Solo Play */}
+          <Text style={styles.label}>YOUR COLORS (pick 2 for solo play)</Text>
+          <View style={styles.colorPickerRow}>
+            {PLAYERS.map(color => {
+              const isSelected = selectedColors.includes(color);
+              return (
+                <Pressable
+                  key={color}
+                  onPress={() => toggleColor(color)}
+                  style={[
+                    styles.colorCircleWrap,
+                    isSelected && styles.colorCircleSelected,
+                  ]}
+                >
+                  <View style={[styles.colorCircle, { backgroundColor: PLAYER_COLORS[color] }]}>
+                    {isSelected && <Text style={styles.colorCheck}>✓</Text>}
+                  </View>
+                  <Text style={[styles.colorLabel, isSelected && styles.colorLabelActive]}>
+                    {PLAYER_NAMES[color]}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          {selectedColors.length > 0 && selectedColors.length < 2 && (
+            <Text style={styles.modeDesc}>Pick one more color</Text>
           )}
 
           <Pressable onPress={createGame} style={styles.primaryBtn}>
@@ -231,7 +258,7 @@ export default function LobbyScreen({ navigate, profile }: Props) {
               <Pressable key={g.id} style={styles.gameItem} onPress={() => joinGame(g.code)}>
                 <Text style={styles.gameCode}>{g.code}</Text>
                 <Text style={styles.gameInfo}>
-                  {g.game_type === 'enochian' ? 'Enochian ' : g.game_type === '2v2' ? '2v2 ' : ''}{g.player_count}/4 players
+                  {g.game_type === 'enochian' ? 'Enochian ' : ''}{g.player_count}/4 players
                 </Text>
               </Pressable>
             ))}
@@ -258,6 +285,9 @@ export default function LobbyScreen({ navigate, profile }: Props) {
           </Pressable>
           <Pressable onPress={() => navigate('Leaderboard')} style={styles.ghostBtn}>
             <Text style={styles.ghostBtnText}>Leaderboard</Text>
+          </Pressable>
+          <Pressable onPress={() => navigate('Marketplace')} style={styles.ghostBtn}>
+            <Text style={styles.ghostBtnText}>Marketplace</Text>
           </Pressable>
           {profile?.is_admin && (
             <Pressable onPress={() => navigate('Admin')} style={styles.ghostBtn}>
@@ -334,6 +364,20 @@ const styles = StyleSheet.create({
   modeTabText: { fontSize: 13, fontWeight: '600', color: COLORS.textDim },
   modeTabTextActive: { color: COLORS.accent },
   modeDesc: { fontSize: 11, color: COLORS.textMuted, textAlign: 'center', marginBottom: 12 },
+  // Color picker
+  colorPickerRow: { flexDirection: 'row', justifyContent: 'center', gap: 12, marginBottom: 12 },
+  colorCircleWrap: {
+    alignItems: 'center', padding: 8, borderRadius: 10,
+    borderWidth: 2, borderColor: 'transparent',
+  },
+  colorCircleSelected: { borderColor: COLORS.accent, backgroundColor: 'rgba(212,175,55,0.1)' },
+  colorCircle: {
+    width: 36, height: 36, borderRadius: 18,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  colorCheck: { color: '#fff', fontWeight: '800', fontSize: 18 },
+  colorLabel: { fontSize: 10, fontWeight: '600', color: COLORS.textDim, marginTop: 4 },
+  colorLabelActive: { color: COLORS.accent },
   // Board themes
   themeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   themeOpt: {

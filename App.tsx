@@ -16,11 +16,13 @@ import WaitingScreen from './src/screens/WaitingScreen';
 import GameScreen from './src/screens/GameScreen';
 import LeaderboardScreen from './src/screens/LeaderboardScreen';
 import AdminScreen from './src/screens/AdminScreen';
+import MarketplaceScreen from './src/screens/MarketplaceScreen';
 
-type Screen = 'Loading' | 'SignIn' | 'Lobby' | 'Waiting' | 'Game' | 'Leaderboard' | 'Admin';
+type Screen = 'Loading' | 'SignIn' | 'Lobby' | 'Waiting' | 'Game' | 'Leaderboard' | 'Admin' | 'Marketplace';
 
 export default function App() {
   const [myColor, setMyColor] = useState<PlayerColor | null>(null);
+  const [myColors, setMyColors] = useState<PlayerColor[]>([]);
   const [myName, setMyName] = useState('');
   const [gameId, setGameId] = useState<string | null>(null);
   const [roomCode, setRoomCode] = useState<string | null>(null);
@@ -38,6 +40,7 @@ export default function App() {
 
   const reset = useCallback(() => {
     setMyColor(null);
+    setMyColors([]);
     setMyName('');
     setGameId(null);
     setRoomCode(null);
@@ -49,11 +52,11 @@ export default function App() {
     AsyncStorage.removeItem('chaturaji_session');
   }, []);
 
-  const navigate = useCallback((s: 'Lobby' | 'Waiting' | 'Game' | 'Leaderboard' | 'Admin') => setScreen(s), []);
+  const navigate = useCallback((s: 'Lobby' | 'Waiting' | 'Game' | 'Leaderboard' | 'Admin' | 'Marketplace') => setScreen(s), []);
 
   const store: GameStore = {
-    myColor, myName, gameId, roomCode, gameType, gameState, players, moveHistory, chatMessages,
-    setMyColor, setMyName, setGameId, setRoomCode, setGameType, setGameState, setPlayers,
+    myColor, myColors, myName, gameId, roomCode, gameType, gameState, players, moveHistory, chatMessages,
+    setMyColor, setMyColors, setMyName, setGameId, setRoomCode, setGameType, setGameState, setPlayers,
     addMove, setMoveHistory, addChat, setChatMessages, reset,
   };
 
@@ -179,6 +182,7 @@ export default function App() {
         {screen === 'Game' && <GameScreen navigate={navigate} boardTheme={boardTheme} />}
         {screen === 'Leaderboard' && <LeaderboardScreen navigate={navigate} />}
         {screen === 'Admin' && <AdminScreen navigate={navigate} />}
+        {screen === 'Marketplace' && <MarketplaceScreen navigate={navigate} />}
         <StatusBar style="light" />
       </View>
     </GameContext.Provider>

@@ -57,6 +57,12 @@ export async function getAuthHeaders(): Promise<Record<string, string>> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+export async function getCurrentUserId(): Promise<string | null> {
+  if (!supabase) return null;
+  const { data: { user } } = await supabase.auth.getUser();
+  return user?.id || null;
+}
+
 export async function signOut() {
   if (!supabase) return;
   await supabase.auth.signOut();

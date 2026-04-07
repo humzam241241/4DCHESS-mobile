@@ -27,11 +27,6 @@ export const ENOCHIAN_TEAM_LABELS: Record<PlayerColor, string> = {
   red: 'Sulphur', yellow: 'Sulphur', green: 'Salt', black: 'Salt',
 };
 
-// 2v2 Teams: Red+Green vs Yellow+Black (diagonal corners)
-export const TEAM_2V2_LABELS: Record<PlayerColor, string> = {
-  red: 'Red+Green', yellow: 'Yel+Black', green: 'Red+Green', black: 'Yel+Black',
-};
-
 export const PIECE_ICONS: Record<PieceType, string> = {
   king: '\u265A',
   elephant: '\u265C',

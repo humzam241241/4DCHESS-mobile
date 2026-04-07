@@ -3,6 +3,7 @@ import { GameState, Player, PlayerColor, GameType, MoveRecord, ChatMessage } fro
 
 export interface GameStore {
   myColor: PlayerColor | null;
+  myColors: PlayerColor[];
   myName: string;
   gameId: string | null;
   roomCode: string | null;
@@ -12,6 +13,7 @@ export interface GameStore {
   moveHistory: MoveRecord[];
   chatMessages: ChatMessage[];
   setMyColor: (c: PlayerColor | null) => void;
+  setMyColors: (c: PlayerColor[]) => void;
   setMyName: (n: string) => void;
   setGameId: (id: string | null) => void;
   setRoomCode: (c: string | null) => void;
