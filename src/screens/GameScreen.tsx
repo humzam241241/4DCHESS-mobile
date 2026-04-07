@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, Pressable } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Pressable, Modal } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getSocket } from '../socket';
 import { useGame } from '../store';
-import { COLORS, PLAYER_NAMES, ENOCHIAN_PLAYER_NAMES, PLAYER_COLORS, BoardTheme } from '../constants';
-import { PlayerColor } from '../types';
+import { COLORS, PLAYER_NAMES, ENOCHIAN_PLAYER_NAMES, PLAYER_COLORS, PIECE_ICONS, BoardTheme } from '../constants';
+import { PlayerColor, PieceType } from '../types';
 import Board from '../components/Board';
 import DicePanel from '../components/DicePanel';
 import PlayersList from '../components/PlayersList';
@@ -29,6 +29,8 @@ export default function GameScreen({ navigate, boardTheme = 'classic' }: Props) 
   const [playerPoints, setPlayerPoints] = useState<Record<string, number> | null>(null);
   const [geomanticFigure, setGeomanticFigure] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<'moves' | 'chat'>('moves');
+  const [promotionOptions, setPromotionOptions] = useState<string[] | null>(null);
+  const [promotionColor, setPromotionColor] = useState<string | null>(null);
 
   const isEnochian = game.gameType === 'enochian';
   const isTeamGame = isEnochian;
@@ -105,6 +107,21 @@ export default function GameScreen({ navigate, boardTheme = 'classic' }: Props) 
       game.addChat({ color: '', name: 'System', message: 'Game started!' });
     };
 
+    const onPromotionNeeded = (data: any) => {
+      // Only show picker if it's our pawn
+      if (myColors.includes(data.color)) {
+        setPromotionColor(data.color);
+        setPromotionOptions(data.options);
+      }
+    };
+
+    const onPromotionApplied = (data: any) => {
+      if (data.state) game.setGameState(data.state);
+      setPromotionOptions(null);
+      setPromotionColor(null);
+      game.addChat({ color: '', name: 'System', message: `Pawn promoted to ${data.promotedTo}` });
+    };
+
     const onPlayerEliminated = (data: any) => {
       game.addChat({
         color: '', name: 'System',
@@ -119,6 +136,8 @@ export default function GameScreen({ navigate, boardTheme = 'classic' }: Props) 
     getSocket().on('player-reconnected', onPlayerReconnected);
     getSocket().on('player-disconnected', onPlayerDisconnected);
     getSocket().on('player-eliminated', onPlayerEliminated);
+    getSocket().on('promotion-needed', onPromotionNeeded);
+    getSocket().on('promotion-applied', onPromotionApplied);
     getSocket().on('game-over', onGameOver);
     getSocket().on('chat-message', onChatMessage);
     getSocket().on('game-started', onGameStarted);
@@ -146,6 +165,8 @@ export default function GameScreen({ navigate, boardTheme = 'classic' }: Props) 
       getSocket().off('player-reconnected', onPlayerReconnected);
       getSocket().off('player-disconnected', onPlayerDisconnected);
       getSocket().off('player-eliminated', onPlayerEliminated);
+      getSocket().off('promotion-needed', onPromotionNeeded);
+      getSocket().off('promotion-applied', onPromotionApplied);
       getSocket().off('game-over', onGameOver);
       getSocket().off('chat-message', onChatMessage);
       getSocket().off('game-started', onGameStarted);
@@ -242,6 +263,16 @@ export default function GameScreen({ navigate, boardTheme = 'classic' }: Props) 
       game.setGameState(res.state);
       setSelectedCell(null);
       setValidMoves([]);
+    });
+  }, []);
+
+  const onPromote = useCallback((chosenType: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    getSocket().emit('promote-pawn', { chosenType }, (res: any) => {
+      if (res.error) return;
+      if (res.state) game.setGameState(res.state);
+      setPromotionOptions(null);
+      setPromotionColor(null);
     });
   }, []);
 
@@ -345,6 +376,26 @@ export default function GameScreen({ navigate, boardTheme = 'classic' }: Props) 
         </View>
       </ScrollView>
 
+      {/* Pawn Promotion Picker */}
+      {promotionOptions && (
+        <Modal visible transparent animationType="fade">
+          <View style={styles.promoOverlay}>
+            <View style={styles.promoCard}>
+              <Text style={styles.promoTitle}>Promote Pawn</Text>
+              <Text style={styles.promoSubtitle}>Choose a piece type:</Text>
+              <View style={styles.promoOptions}>
+                {promotionOptions.map(type => (
+                  <Pressable key={type} onPress={() => onPromote(type)} style={styles.promoOption}>
+                    <Text style={styles.promoIcon}>{PIECE_ICONS[type as keyof typeof PIECE_ICONS] || '?'}</Text>
+                    <Text style={styles.promoLabel}>{type.charAt(0).toUpperCase() + type.slice(1)}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
+
       <GameOverModal
         visible={showGameOver}
         winner={gs.winner}
@@ -425,6 +476,26 @@ const styles = StyleSheet.create({
   },
   tabTextActive: { color: COLORS.accent },
   tabContent: { flex: 1, padding: 8 },
+  // Pawn promotion picker
+  promoOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.85)',
+    alignItems: 'center', justifyContent: 'center', padding: 20,
+  },
+  promoCard: {
+    backgroundColor: COLORS.bgCard, borderRadius: 16,
+    borderWidth: 2, borderColor: COLORS.accent,
+    padding: 24, alignItems: 'center', width: 300,
+  },
+  promoTitle: { fontSize: 20, fontWeight: '800', color: COLORS.accent, marginBottom: 4 },
+  promoSubtitle: { fontSize: 13, color: COLORS.textDim, marginBottom: 16 },
+  promoOptions: { flexDirection: 'row', gap: 12 },
+  promoOption: {
+    alignItems: 'center', padding: 12, borderRadius: 12,
+    borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.bgInput,
+    minWidth: 70,
+  },
+  promoIcon: { fontSize: 32, marginBottom: 4 },
+  promoLabel: { fontSize: 11, fontWeight: '600', color: COLORS.text },
   skipBtnEnochian: {
     backgroundColor: COLORS.accent,
     paddingVertical: 12,

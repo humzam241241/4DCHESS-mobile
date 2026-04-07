@@ -87,6 +87,23 @@ export default function LobbyScreen({ navigate, profile }: Props) {
     });
   };
 
+  const finishJoin = (res: any, trimmed: string) => {
+    game.setGameId(res.gameId);
+    game.setRoomCode(res.code);
+    game.setMyColor(res.color);
+    game.setGameType(res.gameType || 'classic');
+    game.setGameState(res.state);
+    game.setPlayers(res.players);
+    saveSession(res.gameId, res.color, trimmed, res.code, res.gameType || 'classic');
+
+    const hasDicePhase = (res.gameType || 'classic') !== 'enochian';
+    const started =
+      res.players.length >= 4 ||
+      res.state.turnNumber > 1 ||
+      (hasDicePhase && res.state.phase !== 'roll');
+    navigate(started ? 'Game' : 'Waiting');
+  };
+
   const joinGame = (code?: string) => {
     const trimmed = name.trim();
     const codeVal = (code || joinCode).trim().toUpperCase();
@@ -96,23 +113,28 @@ export default function LobbyScreen({ navigate, profile }: Props) {
 
     getSocket().emit('join-game', { code: codeVal, playerName: trimmed }, (res: any) => {
       if (res.error) return Alert.alert('Error', res.error);
-      game.setGameId(res.gameId);
-      game.setRoomCode(res.code);
-      game.setMyColor(res.color);
-      game.setGameType(res.gameType || 'classic');
-      game.setGameState(res.state);
-      game.setPlayers(res.players);
-      saveSession(res.gameId, res.color, trimmed, res.code, res.gameType || 'classic');
 
-      // A game is "in progress" if 4 players are seated OR the game has advanced past
-      // turn 1. Enochian starts with phase='move' (no dice), so the phase check used
-      // for the classic/2v2 'roll' flow doesn't apply — don't use it as a started signal.
-      const hasDicePhase = (res.gameType || 'classic') !== 'enochian';
-      const started =
-        res.players.length >= 4 ||
-        res.state.turnNumber > 1 ||
-        (hasDicePhase && res.state.phase !== 'roll');
-      navigate(started ? 'Game' : 'Waiting');
+      // If game is full but has bots, offer to take over a bot slot
+      if (res.canTakeOver && res.bots?.length > 0) {
+        const botOptions = res.bots.map((b: any) => ({
+          text: `Play as ${b.color.charAt(0).toUpperCase() + b.color.slice(1)}`,
+          onPress: () => {
+            getSocket().emit('join-game', { code: codeVal, playerName: trimmed, takeOverBot: b.color }, (res2: any) => {
+              if (res2.error) return Alert.alert('Error', res2.error);
+              finishJoin(res2, trimmed);
+            });
+          },
+        }));
+        botOptions.push({ text: 'Cancel', onPress: () => {}, style: 'cancel' } as any);
+        Alert.alert(
+          'Game has bots',
+          'This game is full but has bot players. Would you like to take over a bot?',
+          botOptions
+        );
+        return;
+      }
+
+      finishJoin(res, trimmed);
     });
   };
 
